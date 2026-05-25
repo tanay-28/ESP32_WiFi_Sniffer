@@ -1,0 +1,67 @@
+%% ESP32 Sniffer Data Analysis Initialization
+clear; clc; close all;
+
+% 1. Import the CSV dataset as a structured table matrix object
+filename = 'esp32_sniffer_data.csv';
+
+% Configure import options to preserve our snake_case headers completely
+dataOpts = detectImportOptions(filename);
+dataOpts.VariableNamingRule = 'preserve';
+dataTable = readtable(filename, dataOpts);
+
+
+%% 2. Extract Labeled Column Vectors
+rssiData = dataTable.RSSI_dBm;
+frameSizes = dataTable.Frame_Size_Bytes;
+
+%% 3. Generate Core Statistics
+meanRSSI = mean(rssiData);
+medianRSSI = median(rssiData);
+stdDeviation = std(rssiData);
+
+fprintf('\n=== Signal Characteristics ===\n');
+fprintf('Mean RSSI:   %.2f dBm\n', meanRSSI);
+fprintf('Median RSSI: %.2f dBm\n', medianRSSI);
+fprintf('Std Dev:     %.2f dB\n', stdDeviation);
+
+%% 4. Graphical Processing & Distribution Fitting
+bins = 20;
+figure;
+% Plot the Normalized Probability Density Histogram (green bars)
+h = histogram(rssiData,bins, 'Normalization', 'pdf', 'FaceColor', [0.2 0.6 0.5], ...
+              'EdgeColor', [1 1 1], 'LineWidth', 0.5);
+
+
+
+% UI Details and Labels
+title('802.11 RSSI Distribution Analysis');
+xlabel('Received Signal Strength Indicator RSSI (dBm)');
+ylabel('Probability Density Metric');
+grid on;
+ax = gca;
+ax.GridLineStyle = '--';
+ax.GridAlpha = 0.4;
+
+% Group the dataset by unique MAC addresses to count how many frames each sent
+[categories, ~, idx] = unique(dataTable.MAC_Address);
+packetCounts = accumarray(idx, 1);
+
+% Create a summary table sorted by the most active devices
+macSummary = table(categories, packetCounts, 'VariableNames', {'MAC_Address', 'Packet_Count'});
+macSummary = sortrows(macSummary, 'Packet_Count', 'descend');
+head(macSummary, 5) % Display the top 5 most active MAC addresses
+
+
+for i=1:5
+targetMAC = macSummary.MAC_Address{i}; 
+
+% Filter the matrix down to just this single device
+filteredRSSI = dataTable.RSSI_dBm(strcmp(dataTable.MAC_Address, targetMAC));
+
+% Plot its isolated distribution
+figure;
+histogram(filteredRSSI, 'FaceColor', [0.2 0.4 0.8]);
+title(['Isolated RSSI Distribution for MAC: ' targetMAC]);
+xlabel('RSSI (dBm)');
+ylabel('Packet Count');
+end

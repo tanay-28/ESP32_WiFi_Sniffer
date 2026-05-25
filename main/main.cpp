@@ -6,7 +6,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-static const char *TAG = "Wi-Fi Sniffer";
+static const char *TAG = "WiFi Sniffer";// should be called "Listener" lol
 // create structure here for all the key variables
 typedef struct {
     int rssi;// received signal strength indicator
@@ -73,12 +73,16 @@ while(1)
 {
     if (xQueueReceive(packet_queue, &received_pkt, portMAX_DELAY) == pdTRUE)
     {
-      ESP_LOGI(TAG, "[RTOS PRINT] Size: %lu bytes | RSSI: %d dBm | MAC: %02X:%02X:%02X:%02X:%02X:%02X",
-                     received_pkt.length,
-                     received_pkt.rssi,
-                     received_pkt.transmitter_mac[0], received_pkt.transmitter_mac[1],
-                     received_pkt.transmitter_mac[2], received_pkt.transmitter_mac[3],
-                     received_pkt.transmitter_mac[4], received_pkt.transmitter_mac[5]);
+                printf("%lu,1,%lu,%d,%02X:%02X:%02X:%02X:%02X:%02X\n",
+        (unsigned long)esp_log_timestamp(),
+       (unsigned long)received_pkt.length,
+       (int)received_pkt.rssi,
+       received_pkt.transmitter_mac[0], 
+       received_pkt.transmitter_mac[1], 
+       received_pkt.transmitter_mac[2],
+       received_pkt.transmitter_mac[3], 
+       received_pkt.transmitter_mac[4], 
+       received_pkt.transmitter_mac[5]);
     }
 }
 }
@@ -93,7 +97,7 @@ extern "C" void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-    
+
   // create the queue of length 10 packets
   // first in first out buffer
   packet_queue = xQueueCreate(10,sizeof(sniffer_packet_t));
